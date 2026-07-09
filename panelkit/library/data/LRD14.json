@@ -1,0 +1,17 @@
+{
+  "category": "overload",
+  "current_rating_a": 10.0,
+  "description": "Thermal overload relay, 7-10 A",
+  "manufacturer": "Schneider Electric",
+  "part_number": "LRD14",
+  "pins": [
+    {"local_pos": [10.0, 65.0, 42.0], "name": "1"},
+    {"local_pos": [10.0, 5.0, 42.0], "name": "2"},
+    {"local_pos": [22.5, 65.0, 42.0], "name": "3"},
+    {"local_pos": [22.5, 5.0, 42.0], "name": "4"},
+    {"local_pos": [35.0, 65.0, 42.0], "name": "5"},
+    {"local_pos": [35.0, 5.0, 42.0], "name": "6"}
+  ],
+  "properties": {},
+  "size": [45.0, 70.0, 85.0]
+}

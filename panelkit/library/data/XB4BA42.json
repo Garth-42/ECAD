@@ -1,0 +1,13 @@
+{
+  "category": "pushbutton",
+  "current_rating_a": 10.0,
+  "description": "Red flush pushbutton, 1 NC (STOP)",
+  "manufacturer": "Schneider Electric",
+  "part_number": "XB4BA42",
+  "pins": [
+    {"local_pos": [15.0, 25.0, 30.0], "name": "1"},
+    {"local_pos": [15.0, 5.0, 30.0], "name": "2"}
+  ],
+  "properties": {"contact": "NC"},
+  "size": [30.0, 30.0, 60.0]
+}

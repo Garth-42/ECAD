@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "panelkit"
+version = "0.1.0"
+description = "Lightweight electrical-panel design toolkit: one model, many views"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.26,<3",
+    "networkx>=3.2,<4",
+    "scipy>=1.11,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.4",
+    "black>=24",
+]
+
+[project.scripts]
+panelkit = "panelkit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["panelkit*"]
+
+[tool.setuptools.package-data]
+"panelkit.library" = ["data/*.json"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
