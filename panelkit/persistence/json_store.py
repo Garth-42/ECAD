@@ -14,10 +14,13 @@ from ..library.parts import PartLibrary
 from ..model.component import Component
 from ..model.connectivity import Net, Wire
 from ..model.geometry import Placement
+from ..model.harness import Bundle, Harness
 from ..model.layout import Duct, MountingSurface
 from ..model.project import Project
 
-FORMAT_VERSION = 1
+# Version 2 adds bundles/harnesses/wireviz_color (M9). Loading version-1 files
+# must keep working: every new key is read with a default.
+FORMAT_VERSION = 2
 
 
 def _project_to_dict(project: Project) -> dict:
@@ -53,6 +56,7 @@ def _project_to_dict(project: Project) -> dict:
                 "color": w.color,
                 "length_mm": w.length_mm,
                 "path": [list(p) for p in w.path] if w.path is not None else None,
+                "wireviz_color": w.wireviz_color,
             }
             for wire_id, w in sorted(project.wires.items())
         },
@@ -63,6 +67,27 @@ def _project_to_dict(project: Project) -> dict:
         "ducts": {
             did: {"centerline": [list(p) for p in d.centerline], "width_mm": d.width_mm}
             for did, d in sorted(project.ducts.items())
+        },
+        "bundles": {
+            bid: {
+                "name": b.name,
+                "wire_ids": list(b.wire_ids),
+                "kind": b.kind,
+                "color_code": b.color_code,
+                "pn": b.pn,
+                "manufacturer": b.manufacturer,
+                "mpn": b.mpn,
+            }
+            for bid, b in sorted(project.bundles.items())
+        },
+        "harnesses": {
+            hid: {
+                "name": h.name,
+                "component_tags": sorted(h.component_tags),
+                "wire_ids": sorted(h.wire_ids),
+                "bundle_ids": sorted(h.bundle_ids),
+            }
+            for hid, h in sorted(project.harnesses.items())
         },
     }
 
@@ -119,6 +144,7 @@ def load(path: str | Path, library: PartLibrary) -> Project:
             color=w["color"],
             length_mm=w["length_mm"],
             path=[tuple(p) for p in w["path"]] if w.get("path") is not None else None,
+            wireviz_color=w.get("wireviz_color"),
         )
 
     for sid, s in data.get("surfaces", {}).items():
@@ -133,6 +159,27 @@ def load(path: str | Path, library: PartLibrary) -> Project:
                 centerline=[tuple(p) for p in d["centerline"]],
                 width_mm=d["width_mm"],
             )
+        )
+
+    for bid, b in data.get("bundles", {}).items():
+        project.bundles[bid] = Bundle(
+            id=bid,
+            name=b["name"],
+            wire_ids=list(b["wire_ids"]),
+            kind=b.get("kind", "bundle"),
+            color_code=b.get("color_code"),
+            pn=b.get("pn"),
+            manufacturer=b.get("manufacturer"),
+            mpn=b.get("mpn"),
+        )
+
+    for hid, h in data.get("harnesses", {}).items():
+        project.harnesses[hid] = Harness(
+            id=hid,
+            name=h["name"],
+            component_tags=set(h["component_tags"]),
+            wire_ids=set(h["wire_ids"]),
+            bundle_ids=set(h.get("bundle_ids", [])),
         )
 
     return project

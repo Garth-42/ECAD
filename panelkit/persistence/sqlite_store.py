@@ -16,10 +16,14 @@ from ..library.parts import PartLibrary
 from ..model.component import Component
 from ..model.connectivity import Net, Wire
 from ..model.geometry import Placement
+from ..model.harness import Bundle, Harness
 from ..model.layout import Duct, MountingSurface
 from ..model.project import Project
 
-FORMAT_VERSION = 1
+# Version 2 adds bundles/harnesses tables and wires.wireviz_color (M9).
+# Version-1 databases must keep loading: the loader probes for the newer
+# column/tables before reading them.
+FORMAT_VERSION = 2
 
 _SCHEMA = """
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -50,7 +54,8 @@ CREATE TABLE wires (
     gauge TEXT NOT NULL,
     color TEXT NOT NULL,
     length_mm REAL,
-    path TEXT
+    path TEXT,
+    wireviz_color TEXT
 );
 CREATE TABLE surfaces (
     id TEXT PRIMARY KEY,
@@ -61,6 +66,23 @@ CREATE TABLE ducts (
     id TEXT PRIMARY KEY,
     width_mm REAL NOT NULL,
     centerline TEXT NOT NULL
+);
+CREATE TABLE bundles (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    wire_ids TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    color_code TEXT,
+    pn TEXT,
+    manufacturer TEXT,
+    mpn TEXT
+);
+CREATE TABLE harnesses (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    component_tags TEXT NOT NULL,
+    wire_ids TEXT NOT NULL,
+    bundle_ids TEXT NOT NULL
 );
 """
 
@@ -98,7 +120,7 @@ def save(project: Project, path: str | Path) -> None:
             [(n.id, tag, pin) for n in project.iter_nets() for tag, pin in sorted(n.pins)],
         )
         con.executemany(
-            "INSERT INTO wires VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO wires VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 (
                     w.id,
@@ -110,6 +132,7 @@ def save(project: Project, path: str | Path) -> None:
                     w.color,
                     w.length_mm,
                     json.dumps([list(p) for p in w.path]) if w.path is not None else None,
+                    w.wireviz_color,
                 )
                 for w in project.iter_wires()
             ],
@@ -126,6 +149,35 @@ def save(project: Project, path: str | Path) -> None:
             [
                 (d.id, d.width_mm, json.dumps([list(p) for p in d.centerline]))
                 for d in (project.ducts[k] for k in sorted(project.ducts))
+            ],
+        )
+        con.executemany(
+            "INSERT INTO bundles VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    b.id,
+                    b.name,
+                    json.dumps(list(b.wire_ids)),
+                    b.kind,
+                    b.color_code,
+                    b.pn,
+                    b.manufacturer,
+                    b.mpn,
+                )
+                for b in (project.bundles[k] for k in sorted(project.bundles))
+            ],
+        )
+        con.executemany(
+            "INSERT INTO harnesses VALUES (?, ?, ?, ?, ?)",
+            [
+                (
+                    h.id,
+                    h.name,
+                    json.dumps(sorted(h.component_tags)),
+                    json.dumps(sorted(h.wire_ids)),
+                    json.dumps(sorted(h.bundle_ids)),
+                )
+                for h in (project.harnesses[k] for k in sorted(project.harnesses))
             ],
         )
         con.commit()
@@ -176,11 +228,19 @@ def load(path: str | Path, library: PartLibrary) -> Project:
                 )
             )
 
-        for row in con.execute(
+        # Version-1 databases have no wireviz_color column; probe before reading.
+        wire_columns = {row[1] for row in con.execute("PRAGMA table_info(wires)")}
+        has_wireviz_color = "wireviz_color" in wire_columns
+        wire_sql = (
             "SELECT id, net_id, source_tag, source_pin, target_tag, target_pin,"
-            " number, gauge, color, length_mm, path FROM wires ORDER BY id"
-        ):
-            wire_id, net_id, s_tag, s_pin, t_tag, t_pin, number, gauge, color, length, path = row
+            " number, gauge, color, length_mm, path"
+            + (", wireviz_color" if has_wireviz_color else "")
+            + " FROM wires ORDER BY id"
+        )
+        for row in con.execute(wire_sql):
+            wire_id, net_id, s_tag, s_pin, t_tag, t_pin, number, gauge, color, length, path = row[
+                :11
+            ]
             project.wires[wire_id] = Wire(
                 id=wire_id,
                 net_id=net_id,
@@ -191,6 +251,7 @@ def load(path: str | Path, library: PartLibrary) -> Project:
                 color=color,
                 length_mm=length,
                 path=[tuple(p) for p in json.loads(path)] if path is not None else None,
+                wireviz_color=row[11] if has_wireviz_color else None,
             )
 
         for sid, ox, oy, oz, w, h in con.execute(
@@ -208,6 +269,38 @@ def load(path: str | Path, library: PartLibrary) -> Project:
                     width_mm=width_mm,
                 )
             )
+
+        # Version-1 databases lack the bundles/harnesses tables entirely.
+        tables = {
+            row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
+        if "bundles" in tables:
+            for bid, name, wire_ids, kind, color_code, pn, manufacturer, mpn in con.execute(
+                "SELECT id, name, wire_ids, kind, color_code, pn, manufacturer, mpn"
+                " FROM bundles ORDER BY id"
+            ):
+                project.bundles[bid] = Bundle(
+                    id=bid,
+                    name=name,
+                    wire_ids=list(json.loads(wire_ids)),
+                    kind=kind,
+                    color_code=color_code,
+                    pn=pn,
+                    manufacturer=manufacturer,
+                    mpn=mpn,
+                )
+        if "harnesses" in tables:
+            for hid, name, component_tags, wire_ids, bundle_ids in con.execute(
+                "SELECT id, name, component_tags, wire_ids, bundle_ids"
+                " FROM harnesses ORDER BY id"
+            ):
+                project.harnesses[hid] = Harness(
+                    id=hid,
+                    name=name,
+                    component_tags=set(json.loads(component_tags)),
+                    wire_ids=set(json.loads(wire_ids)),
+                    bundle_ids=set(json.loads(bundle_ids)),
+                )
 
         return project
     finally:

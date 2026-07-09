@@ -32,6 +32,7 @@ class Wire:
     color: str = "black"
     length_mm: float | None = None
     path: list[tuple[float, float, float]] | None = None
+    wireviz_color: str | None = None  # explicit IEC 60757 code override (M9)
 
 
 def build_graph(project: "Project") -> nx.Graph:

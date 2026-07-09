@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Iterator
 
 from .component import Component, PinRef
 from .connectivity import Net, Wire
+from .harness import Bundle, Harness
 from .layout import Duct, MountingSurface
 
 if TYPE_CHECKING:
@@ -22,6 +23,8 @@ class Project:
     wires: dict[str, Wire] = field(default_factory=dict)
     surfaces: dict[str, MountingSurface] = field(default_factory=dict)
     ducts: dict[str, Duct] = field(default_factory=dict)
+    bundles: dict[str, Bundle] = field(default_factory=dict)
+    harnesses: dict[str, Harness] = field(default_factory=dict)
 
     def add_component(self, component: Component) -> Component:
         if component.tag in self.components:
