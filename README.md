@@ -31,10 +31,12 @@ in any browser).
 
 ## Commands
 
-Every command takes a project JSON path (see `out/project.json` for the format):
+Every command takes a project file path (see `out/project.json` for the
+format). Files ending in `.db`, `.sqlite`, or `.sqlite3` use the equivalent
+SQLite backend; anything else is treated as JSON.
 
 ```bash
-panelkit validate <project.json>            # run checks; exit 1 on any error
+panelkit validate <project.json|.db>        # run checks; exit 1 on any error
 panelkit bom <project.json>                 # bill of materials
 panelkit netlist <project.json>             # nets and their pins
 panelkit connections <project.json>         # resolved point-to-point wires
