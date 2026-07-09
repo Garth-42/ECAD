@@ -1,0 +1,110 @@
+cables:
+  W1:
+    category: bundle
+    colors:
+    - BK
+    - BK
+    - BK
+    gauge: 1.5 mm2
+    length: 694.5 mm
+    wirecount: 3
+    wirelabels:
+    - '111'
+    - '113'
+    - '115'
+  W110:
+    category: bundle
+    colors:
+    - BK
+    gauge: 1.5 mm2
+    length: 780.9 mm
+    wirecount: 1
+    wirelabels:
+    - '110'
+  W112:
+    category: bundle
+    colors:
+    - BK
+    gauge: 1.5 mm2
+    length: 775.7 mm
+    wirecount: 1
+    wirelabels:
+    - '112'
+  W114:
+    category: bundle
+    colors:
+    - BK
+    gauge: 1.5 mm2
+    length: 771.1 mm
+    wirecount: 1
+    wirelabels:
+    - '114'
+connections:
+- - M1:
+    - U
+    - V
+    - W
+  - W1:
+    - 1
+    - 2
+    - 3
+  - X1:
+    - '1'
+    - '2'
+    - '3'
+- - F1:
+    - '2'
+  - W110:
+    - 1
+  - X1:
+    - '1'
+- - F1:
+    - '4'
+  - W112:
+    - 1
+  - X1:
+    - '2'
+- - F1:
+    - '6'
+  - W114:
+    - 1
+  - X1:
+    - '3'
+connectors:
+  F1:
+    manufacturer: Schneider Electric
+    pinlabels:
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+    - '5'
+    - '6'
+    pn: LRD14
+    type: Thermal overload relay, 7-10 A
+  M1:
+    manufacturer: Siemens
+    pinlabels:
+    - U
+    - V
+    - W
+    pn: 1LE1003-0EB02
+    type: 3-phase induction motor, 2.2 kW, 400 V
+  X1:
+    manufacturer: Weidmuller
+    pinlabels:
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+    - '5'
+    - '6'
+    - '7'
+    - '8'
+    pn: WDU2.5-8
+    type: 8-way feed-through terminal strip, 2.5 mm2
+metadata:
+  notes: Exported by PanelKit from project 'motor_start_stop'; cable lengths are routed
+    lengths in millimetres.
+  pn: H1
+  title: Motor feed

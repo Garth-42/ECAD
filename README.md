@@ -44,7 +44,21 @@ panelkit terminals <project.json>           # terminal-strip plan
 panelkit route <project.json>               # duct-routed wire lengths (cut list)
 panelkit render-schematic <project.json> -o schematic.svg
 panelkit render-wiring <project.json> -o wiring.svg
+panelkit harness list <project.json>        # harnesses with component/wire counts
+panelkit export-wireviz <project.json> --harness H1 -o H1.yml
+panelkit export-wireviz <project.json> --harness H1 --render -o out/
 ```
+
+## WireViz harness export
+
+A **harness** is a named, build-level subset of the panel (components +
+wires/bundles); each harness exports to one
+[WireViz](https://github.com/wireviz/WireViz) YAML document with connectors,
+cables/bundles, IEC colors, gauges, and routed lengths. `--render` shells out
+to an installed `wireviz` CLI (optional — install with
+`pip install "panelkit[wireviz]"`, rendering also needs GraphViz) to produce
+the harness drawing and BOM. PanelKit itself never imports WireViz; the
+integration is a generated file plus a subprocess.
 
 ## How it fits together
 
