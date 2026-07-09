@@ -1,0 +1,13 @@
+{
+  "category": "pushbutton",
+  "current_rating_a": 10.0,
+  "description": "Green flush pushbutton, 1 NO (START)",
+  "manufacturer": "Schneider Electric",
+  "part_number": "XB4BA31",
+  "pins": [
+    {"local_pos": [15.0, 25.0, 30.0], "name": "3"},
+    {"local_pos": [15.0, 5.0, 30.0], "name": "4"}
+  ],
+  "properties": {"contact": "NO"},
+  "size": [30.0, 30.0, 60.0]
+}

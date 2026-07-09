@@ -1,0 +1,14 @@
+{
+  "category": "motor",
+  "current_rating_a": 5.0,
+  "description": "3-phase induction motor, 2.2 kW, 400 V",
+  "manufacturer": "Siemens",
+  "part_number": "1LE1003-0EB02",
+  "pins": [
+    {"local_pos": [40.0, 60.0, 120.0], "name": "U"},
+    {"local_pos": [60.0, 60.0, 120.0], "name": "V"},
+    {"local_pos": [80.0, 60.0, 120.0], "name": "W"}
+  ],
+  "properties": {"power_kw": 2.2},
+  "size": [120.0, 120.0, 120.0]
+}

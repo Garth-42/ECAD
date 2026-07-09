@@ -1,0 +1,17 @@
+{
+  "category": "breaker",
+  "current_rating_a": 10.0,
+  "description": "3-pole motor circuit breaker, 6-10 A",
+  "manufacturer": "Schneider Electric",
+  "part_number": "GV2ME14",
+  "pins": [
+    {"local_pos": [7.5, 85.0, 40.0], "name": "L1"},
+    {"local_pos": [22.5, 85.0, 40.0], "name": "L2"},
+    {"local_pos": [37.5, 85.0, 40.0], "name": "L3"},
+    {"local_pos": [7.5, 5.0, 40.0], "name": "T1"},
+    {"local_pos": [22.5, 5.0, 40.0], "name": "T2"},
+    {"local_pos": [37.5, 5.0, 40.0], "name": "T3"}
+  ],
+  "properties": {"poles": 3},
+  "size": [45.0, 90.0, 80.0]
+}

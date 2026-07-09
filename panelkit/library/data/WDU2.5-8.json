@@ -1,0 +1,19 @@
+{
+  "category": "terminal_block",
+  "current_rating_a": 24.0,
+  "description": "8-way feed-through terminal strip, 2.5 mm2",
+  "manufacturer": "Weidmuller",
+  "part_number": "WDU2.5-8",
+  "pins": [
+    {"local_pos": [5.0, 5.0, 40.0], "name": "1"},
+    {"local_pos": [15.0, 5.0, 40.0], "name": "2"},
+    {"local_pos": [25.0, 5.0, 40.0], "name": "3"},
+    {"local_pos": [35.0, 5.0, 40.0], "name": "4"},
+    {"local_pos": [45.0, 5.0, 40.0], "name": "5"},
+    {"local_pos": [55.0, 5.0, 40.0], "name": "6"},
+    {"local_pos": [65.0, 5.0, 40.0], "name": "7"},
+    {"local_pos": [75.0, 5.0, 40.0], "name": "8"}
+  ],
+  "properties": {},
+  "size": [80.0, 10.0, 40.0]
+}

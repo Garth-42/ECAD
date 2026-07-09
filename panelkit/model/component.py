@@ -32,9 +32,7 @@ class Component:
         return [(self.tag, pin.name) for pin in part.pins]
 
 
-def world_pin_position(
-    component: Component, pin_name: str, library: "PartLibrary"
-) -> np.ndarray:
+def world_pin_position(component: Component, pin_name: str, library: "PartLibrary") -> np.ndarray:
     """World XYZ (length-3 ndarray) of a component pin."""
     part = library.get(component.part_number)
     for pin in part.pins:

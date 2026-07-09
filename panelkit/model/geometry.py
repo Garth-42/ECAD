@@ -89,9 +89,7 @@ class BoundingBox:
         return pts.min(axis=0), pts.max(axis=0)
 
 
-def aabb_gap(
-    a: tuple[np.ndarray, np.ndarray], b: tuple[np.ndarray, np.ndarray]
-) -> float:
+def aabb_gap(a: tuple[np.ndarray, np.ndarray], b: tuple[np.ndarray, np.ndarray]) -> float:
     """Axis-aligned gap between two AABBs.
 
     Positive: minimum separation distance. Zero or negative: the boxes touch
