@@ -15,8 +15,11 @@ from ..library.parts import PartLibrary
 from ..model.component import Component
 from ..model.connectivity import Net
 from ..model.geometry import Placement
+from ..model.harness import Bundle, select_harness
 from ..model.layout import Duct, MountingSurface
 from ..model.project import Project
+from ..routing.resolve import resolve_wires
+from ..routing.router import route_wires
 
 MOTOR_LOAD_A = 4.9
 
@@ -95,4 +98,29 @@ def build_project(library: PartLibrary | None = None) -> Project:
             centerline=[(20.0, 60.0, 0.0), (300.0, 60.0, 0.0), (580.0, 60.0, 0.0)],
         )
     )
+    return p
+
+
+def build_project_with_harness(library: PartLibrary | None = None) -> Project:
+    """The canonical project, resolved + routed, with the field harness H1.
+
+    Bundle W1 groups the three motor conductors (M1 U/V/W to terminals
+    X1:1/2/3). Harness H1 covers the field wiring X1 -> F1 -> M1: W1 plus the
+    three loose F1-to-X1 wires.
+
+    NOTE: the extension spec words W1 as "the wires from X1 through F1 to M1",
+    but v1 bundles are point-to-point (extension spec section 2), so W1 is the
+    M1<->X1 run only; the F1<->X1 wires stay loose members of H1.
+    """
+    p = build_project(library)
+    resolve_wires(p)
+    route_wires(p)
+
+    motor_wire_ids = sorted(
+        w.id for w in p.wires.values() if {w.source[0], w.target[0]} == {"M1", "X1"}
+    )
+    p.bundles["W1"] = Bundle(id="W1", name="W1", wire_ids=motor_wire_ids, kind="bundle")
+
+    harness = select_harness(p, {"X1", "F1", "M1"}, name="Motor feed", harness_id="H1")
+    p.harnesses[harness.id] = harness
     return p
