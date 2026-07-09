@@ -9,7 +9,7 @@ from pathlib import Path
 from .examples.motor_start_stop import build_project
 from .library.parts import PartLibrary
 from .model.project import Project
-from .persistence.json_store import load, save
+from .persistence import load_project, save_project
 from .routing.resolve import resolve_wires
 from .routing.router import render_cut_list, route_wires
 from .rules.checks import validate
@@ -29,7 +29,7 @@ def _library(args: argparse.Namespace) -> PartLibrary:
 
 
 def _load(args: argparse.Namespace) -> Project:
-    return load(args.project, _library(args))
+    return load_project(args.project, _library(args))
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
@@ -96,7 +96,7 @@ def cmd_demo(args: argparse.Namespace) -> int:
     project = build_project()
     resolve_wires(project)
     route_wires(project)
-    save(project, out_dir / "project.json")
+    save_project(project, out_dir / "project.json")
     (out_dir / "schematic.svg").write_text(render_schematic(project))
     (out_dir / "wiring.svg").write_text(render_wiring(project))
     print(f"wrote {out_dir / 'project.json'}")
@@ -118,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
     def add(name: str, func, help_: str, project_arg: bool = True, output: str | None = None):
         p = sub.add_parser(name, help=help_)
         if project_arg:
-            p.add_argument("project", help="path to project JSON")
+            p.add_argument("project", help="project file (.json, or .db/.sqlite for SQLite)")
             p.add_argument("--library", help="extra parts directory", default=None)
         p.set_defaults(func=func)
         if output:
