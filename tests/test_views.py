@@ -1,13 +1,20 @@
-"""M5/M7: text views (netlist, connections, BOM, terminal plan) — data + render."""
+"""M5/M7: text views (netlist, connections, BOM, terminal plan) and SVG views."""
+
+import xml.etree.ElementTree as ET
 
 from examples.motor_start_stop import build_project
 
 import pytest
 
 from panelkit.model.project import Project
+from panelkit.routing.resolve import resolve_wires
+from panelkit.routing.router import route_wires
 from panelkit.views.bom import bom, render_bom
 from panelkit.views.connection_list import connection_list, render_connection_list
 from panelkit.views.netlist import netlist, render_netlist
+from panelkit.views.svg_schematic import render_schematic
+from panelkit.views.svg_util import Canvas, line, polyline, rect, text
+from panelkit.views.svg_wiring import render_wiring
 from panelkit.views.terminal_plan import render_terminal_plan, terminal_plan
 
 
@@ -79,3 +86,63 @@ class TestTerminalPlan:
     def test_render(self, example: Project) -> None:
         text = render_terminal_plan(example)
         assert "[X1]" in text and "M1:U" in text
+
+
+class TestSvgUtil:
+    def test_canvas_produces_wellformed_svg(self) -> None:
+        c = Canvas(100, 50)
+        c.add(rect(0, 0, 10, 10, fill="red", stroke_width=1.5))
+        c.add(line(0, 0, 10, 10, stroke="black"))
+        c.add(polyline([(0, 0), (5, 5), (10, 0)], stroke="blue"))
+        c.add(text(1, 1, 'label <&> "quoted"'))
+        root = ET.fromstring(c.to_svg())
+        assert root.tag.endswith("svg")
+        assert root.get("viewBox") == "0 0 100 50"
+
+    def test_attr_underscores_become_hyphens(self) -> None:
+        assert 'stroke-width="2"' in rect(0, 0, 1, 1, stroke_width=2)
+
+
+class TestSvgSchematic:
+    def test_wellformed_with_labels(self, example: Project) -> None:
+        out = render_schematic(example)
+        root = ET.fromstring(out)
+        assert root.tag.endswith("svg")
+        for tag in ("Q1", "K1", "F1", "M1", "S1", "S2", "X1"):
+            assert f">{tag}<" in out
+        assert ">101<" in out  # first wire number
+        assert "→" in out  # cross-references present
+
+    def test_deterministic(self, example: Project) -> None:
+        assert render_schematic(example) == render_schematic(build_project())
+
+    def test_does_not_mutate_model(self, example: Project) -> None:
+        render_schematic(example)
+        assert example.wires == {}
+
+
+class TestSvgWiring:
+    def test_wellformed_with_labels(self, example: Project) -> None:
+        resolve_wires(example)
+        route_wires(example)
+        out = render_wiring(example)
+        root = ET.fromstring(out)
+        assert root.tag.endswith("svg")
+        for tag in ("Q1", "K1", "X1"):
+            assert f">{tag}<" in out
+        assert ">plate<" in out  # surface label
+        assert ">101<" in out  # wire number
+
+    def test_uses_routed_paths(self, example: Project) -> None:
+        resolve_wires(example)
+        route_wires(example)
+        out = render_wiring(example)
+        # A routed polyline has more than two points: at least one comma-pair
+        # beyond source and target on some wire.
+        polylines = [e for e in out.split("\n") if e.startswith("<polyline")]
+        assert any(len(p.split('points="')[1].split('"')[0].split()) > 2 for p in polylines)
+
+    def test_renders_before_routing_too(self, example: Project) -> None:
+        out = render_wiring(example)
+        assert ET.fromstring(out).tag.endswith("svg")
+        assert example.wires == {}  # still a pure view
