@@ -1,0 +1,133 @@
+{
+  "bundles": {},
+  "components": {
+    "F1": {
+      "part_number": "OL-3P-16A",
+      "placement": null,
+      "surface_id": null
+    },
+    "K1": {
+      "part_number": "CON-3P-24VDC",
+      "placement": null,
+      "surface_id": null
+    },
+    "M1": {
+      "part_number": "MOT-3PH-4KW",
+      "placement": null,
+      "surface_id": null
+    },
+    "Q1": {
+      "part_number": "BRK-3P-25A",
+      "placement": null,
+      "surface_id": null
+    },
+    "S1": {
+      "part_number": "PB-NC-RED",
+      "placement": null,
+      "surface_id": null
+    },
+    "S2": {
+      "part_number": "PB-NO-GRN",
+      "placement": null,
+      "surface_id": null
+    },
+    "X1": {
+      "part_number": "TB-STRIP-8",
+      "placement": null,
+      "surface_id": null
+    }
+  },
+  "ducts": {},
+  "format_version": 2,
+  "harnesses": {},
+  "name": "Motor Start/Stop",
+  "nets": {
+    "NET_0001": {
+      "name": "NET_0001",
+      "pins": [["Q1", "L1"], ["X1", "1"]],
+      "properties": {}
+    },
+    "NET_0002": {
+      "name": "NET_0002",
+      "pins": [["Q1", "L2"], ["X1", "2"]],
+      "properties": {}
+    },
+    "NET_0003": {
+      "name": "NET_0003",
+      "pins": [["Q1", "L3"], ["X1", "3"]],
+      "properties": {}
+    },
+    "NET_0004": {
+      "name": "NET_0004",
+      "pins": [["K1", "1"], ["Q1", "T1"]],
+      "properties": {}
+    },
+    "NET_0005": {
+      "name": "NET_0005",
+      "pins": [["K1", "3"], ["Q1", "T2"]],
+      "properties": {}
+    },
+    "NET_0006": {
+      "name": "NET_0006",
+      "pins": [["K1", "5"], ["Q1", "T3"]],
+      "properties": {}
+    },
+    "NET_0007": {
+      "name": "NET_0007",
+      "pins": [["K1", "14"], ["K1", "A1"], ["S2", "14"]],
+      "properties": {}
+    },
+    "NET_0008": {
+      "name": "NET_0008",
+      "pins": [["K1", "A2"], ["X1", "8"]],
+      "properties": {}
+    },
+    "NET_0009": {
+      "name": "NET_0009",
+      "pins": [["F1", "1"], ["K1", "2"]],
+      "properties": {}
+    },
+    "NET_0010": {
+      "name": "NET_0010",
+      "pins": [["F1", "3"], ["K1", "4"]],
+      "properties": {}
+    },
+    "NET_0011": {
+      "name": "NET_0011",
+      "pins": [["F1", "5"], ["K1", "6"]],
+      "properties": {}
+    },
+    "NET_0012": {
+      "name": "NET_0012",
+      "pins": [["K1", "13"], ["S1", "12"], ["S2", "13"]],
+      "properties": {}
+    },
+    "NET_0013": {
+      "name": "NET_0013",
+      "pins": [["F1", "2"], ["M1", "U"], ["X1", "4"]],
+      "properties": {}
+    },
+    "NET_0014": {
+      "name": "NET_0014",
+      "pins": [["F1", "4"], ["M1", "V"], ["X1", "5"]],
+      "properties": {}
+    },
+    "NET_0015": {
+      "name": "NET_0015",
+      "pins": [["F1", "6"], ["M1", "W"], ["X1", "6"]],
+      "properties": {}
+    },
+    "NET_0016": {
+      "name": "NET_0016",
+      "pins": [["F1", "95"], ["X1", "7"]],
+      "properties": {}
+    },
+    "NET_0017": {
+      "name": "NET_0017",
+      "pins": [["F1", "96"], ["S1", "11"]],
+      "properties": {}
+    }
+  },
+  "surfaces": {},
+  "wires": {}
+}

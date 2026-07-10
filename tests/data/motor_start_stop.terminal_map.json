@@ -1,0 +1,10 @@
+{
+  "_comment": "Maps each QET element FILENAME to its PanelKit pin names in terminal order. Keys are trailing .elmt filenames (not full paths) because real QET saves rewrite collection paths to embed://import/... — match on the basename. Required because QET stores no usable terminal names (verified: real placed terminals carry name absent, '', or the placeholder '_'). The importer assigns the i-th <terminal> of a placed element (document order) to pin_names[i]. Ship one entry per element in the PanelKit-matched QET symbol collection, alongside matching PanelKit part JSONs.",
+  "breaker_3p.elmt":        ["L1", "L2", "L3", "T1", "T2", "T3"],
+  "contactor_3p_aux.elmt":  ["A1", "A2", "1", "2", "3", "4", "5", "6", "13", "14"],
+  "overload_3p.elmt":       ["1", "2", "3", "4", "5", "6", "95", "96"],
+  "motor_3ph.elmt":         ["U", "V", "W"],
+  "pushbutton_nc.elmt":     ["11", "12"],
+  "pushbutton_no.elmt":     ["13", "14"],
+  "terminal_block_8.elmt":  ["1", "2", "3", "4", "5", "6", "7", "8"]
+}

@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PanelKit test fixture: motor start/stop control panel, authored in the style
+  of a QElectroTech (QET) project file. Format target: QET stable v0.100;
+  conventions below were reconciled (2026-07-10) against the 20 genuine
+  QET-authored example projects shipped with Ubuntu's qelectrotech 0.9 package
+  (format versions 0.3-0.80).
+
+  IMPORTANT (honest provenance): this file is HAND-BUILT, then reconciled
+  against real QET output. Verified real-format facts it now mirrors:
+    * Placed elements reference their embedded collection via
+      type="embed://import/..." (QET rewrites paths on save); terminal-map
+      lookup therefore matches on the trailing .elmt filename.
+    * Terminals carry NO usable names: real files show name absent, name="",
+      or the 0.80-era placeholder name="_" number="_" nameHidden="0" (used
+      here). Pin resolution must go through the terminal map.
+    * Terminal ids are numeric and unique per folio; conductors reference
+      them via terminal1/terminal2.
+    * Elements carry uuid/z/freezeLabel noise; conductors carry many more
+      attributes than shown in older drafts. Parsers must ignore the extras.
+    * The part number lives in the standard, UI-editable
+      manufacturer_reference information field (a custom panelkit_pn field is
+      NOT authorable in the QET UI; importers may accept it as legacy input).
+  Ratings are nominal fixture values (25 A breaker / 16 A overload are
+  oversized for a 4 kW motor; the 24 VDC coil implies an external DC control
+  feed on X1 points 7/8) - do not "fix" them without regenerating the golden.
+
+  The authoritative contract for the importer is
+  motor_start_stop.import.golden.json; terminal-id -> pin-name resolution is
+  defined by motor_start_stop.terminal_map.json. Verify consistency with
+  scripts/check_qet_fixtures.py.
+-->
+<project version="0.100" title="Motor Start/Stop">
+  <diagram order="1" title="Power + Control" cols="17" rows="8" colsize="60" rowsize="80" version="0.100">
+    <elements>
+
+      <!-- Q1: 3-pole main breaker. terminals 1..6 = L1,L2,L3,T1,T2,T3 -->
+      <element type="embed://import/panelkit/breaker_3p.elmt" x="200" y="120" orientation="0" z="10" freezeLabel="false" uuid="{a1000001-0000-4000-8000-000000000001}">
+        <terminals>
+          <terminal id="1" x="180" y="100" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="2" x="200" y="100" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="3" x="220" y="100" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="4" x="180" y="140" orientation="s" name="_" number="_" nameHidden="0"/>
+          <terminal id="5" x="200" y="140" orientation="s" name="_" number="_" nameHidden="0"/>
+          <terminal id="6" x="220" y="140" orientation="s" name="_" number="_" nameHidden="0"/>
+        </terminals>
+        <elementInformations>
+          <elementInformation name="label" show="1">Q1</elementInformation>
+          <elementInformation name="manufacturer_reference" show="0">BRK-3P-25A</elementInformation>
+        </elementInformations>
+      </element>
+
+      <!-- K1: contactor. terminals 20..29 = A1,A2,1,2,3,4,5,6,13,14 -->
+      <element type="embed://import/panelkit/contactor_3p_aux.elmt" x="200" y="260" orientation="0" z="10" freezeLabel="false" uuid="{a1000001-0000-4000-8000-000000000002}">
+        <terminals>
+          <terminal id="20" x="150" y="240" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="21" x="150" y="280" orientation="s" name="_" number="_" nameHidden="0"/>
+          <terminal id="22" x="180" y="240" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="23" x="180" y="280" orientation="s" name="_" number="_" nameHidden="0"/>
+          <terminal id="24" x="200" y="240" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="25" x="200" y="280" orientation="s" name="_" number="_" nameHidden="0"/>
+          <terminal id="26" x="220" y="240" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="27" x="220" y="280" orientation="s" name="_" number="_" nameHidden="0"/>
+          <terminal id="28" x="250" y="240" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="29" x="250" y="280" orientation="s" name="_" number="_" nameHidden="0"/>
+        </terminals>
+        <elementInformations>
+          <elementInformation name="label" show="1">K1</elementInformation>
+          <elementInformation name="manufacturer_reference" show="0">CON-3P-24VDC</elementInformation>
+        </elementInformations>
+      </element>
+
+      <!-- F1: thermal overload. terminals 30..37 = 1,2,3,4,5,6,95,96 -->
+      <element type="embed://import/panelkit/overload_3p.elmt" x="200" y="380" orientation="0" z="10" freezeLabel="false" uuid="{a1000001-0000-4000-8000-000000000003}">
+        <terminals>
+          <terminal id="30" x="180" y="360" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="31" x="180" y="400" orientation="s" name="_" number="_" nameHidden="0"/>
+          <terminal id="32" x="200" y="360" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="33" x="200" y="400" orientation="s" name="_" number="_" nameHidden="0"/>
+          <terminal id="34" x="220" y="360" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="35" x="220" y="400" orientation="s" name="_" number="_" nameHidden="0"/>
+          <terminal id="36" x="250" y="360" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="37" x="250" y="400" orientation="s" name="_" number="_" nameHidden="0"/>
+        </terminals>
+        <elementInformations>
+          <elementInformation name="label" show="1">F1</elementInformation>
+          <elementInformation name="manufacturer_reference" show="0">OL-3P-16A</elementInformation>
+        </elementInformations>
+      </element>
+
+      <!-- M1: 3-phase motor. terminals 40..42 = U,V,W -->
+      <element type="embed://import/panelkit/motor_3ph.elmt" x="200" y="520" orientation="0" z="10" freezeLabel="false" uuid="{a1000001-0000-4000-8000-000000000004}">
+        <terminals>
+          <terminal id="40" x="180" y="500" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="41" x="200" y="500" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="42" x="220" y="500" orientation="n" name="_" number="_" nameHidden="0"/>
+        </terminals>
+        <elementInformations>
+          <elementInformation name="label" show="1">M1</elementInformation>
+          <elementInformation name="manufacturer_reference" show="0">MOT-3PH-4KW</elementInformation>
+        </elementInformations>
+      </element>
+
+      <!-- S1: STOP pushbutton (NC). terminals 50..51 = 11,12 -->
+      <element type="embed://import/panelkit/pushbutton_nc.elmt" x="480" y="200" orientation="0" z="10" freezeLabel="false" uuid="{a1000001-0000-4000-8000-000000000005}">
+        <terminals>
+          <terminal id="50" x="480" y="180" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="51" x="480" y="220" orientation="s" name="_" number="_" nameHidden="0"/>
+        </terminals>
+        <elementInformations>
+          <elementInformation name="label" show="1">S1</elementInformation>
+          <elementInformation name="manufacturer_reference" show="0">PB-NC-RED</elementInformation>
+        </elementInformations>
+      </element>
+
+      <!-- S2: START pushbutton (NO). terminals 60..61 = 13,14 -->
+      <element type="embed://import/panelkit/pushbutton_no.elmt" x="480" y="300" orientation="0" z="10" freezeLabel="false" uuid="{a1000001-0000-4000-8000-000000000006}">
+        <terminals>
+          <terminal id="60" x="480" y="280" orientation="n" name="_" number="_" nameHidden="0"/>
+          <terminal id="61" x="480" y="320" orientation="s" name="_" number="_" nameHidden="0"/>
+        </terminals>
+        <elementInformations>
+          <elementInformation name="label" show="1">S2</elementInformation>
+          <elementInformation name="manufacturer_reference" show="0">PB-NO-GRN</elementInformation>
+        </elementInformations>
+      </element>
+
+      <!-- X1: terminal block. terminals 70..77 = 1,2,3,4,5,6,7,8 -->
+      <element type="embed://import/panelkit/terminal_block_8.elmt" x="360" y="440" orientation="0" z="10" freezeLabel="false" uuid="{a1000001-0000-4000-8000-000000000007}">
+        <terminals>
+          <terminal id="70" x="320" y="440" orientation="w" name="_" number="_" nameHidden="0"/>
+          <terminal id="71" x="340" y="440" orientation="w" name="_" number="_" nameHidden="0"/>
+          <terminal id="72" x="360" y="440" orientation="w" name="_" number="_" nameHidden="0"/>
+          <terminal id="73" x="380" y="440" orientation="w" name="_" number="_" nameHidden="0"/>
+          <terminal id="74" x="400" y="440" orientation="w" name="_" number="_" nameHidden="0"/>
+          <terminal id="75" x="420" y="440" orientation="w" name="_" number="_" nameHidden="0"/>
+          <terminal id="76" x="440" y="440" orientation="w" name="_" number="_" nameHidden="0"/>
+          <terminal id="77" x="460" y="440" orientation="w" name="_" number="_" nameHidden="0"/>
+        </terminals>
+        <elementInformations>
+          <elementInformation name="label" show="1">X1</elementInformation>
+          <elementInformation name="manufacturer_reference" show="0">TB-STRIP-8</elementInformation>
+        </elementInformations>
+      </element>
+
+    </elements>
+
+    <!-- Conductors carry only the attributes the importer needs plus a
+         representative sample of the ~25 attributes real saves include;
+         parsers must tolerate (and ignore) the extras. All num="" here, so
+         every net gets a synthetic NET_xxxx name. -->
+    <conductors>
+      <!-- Power: incoming mains via X1 to breaker Q1 -->
+      <conductor terminal1="70" terminal2="1"  type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- X1.1 - Q1.L1 -->
+      <conductor terminal1="71" terminal2="2"  type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- X1.2 - Q1.L2 -->
+      <conductor terminal1="72" terminal2="3"  type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- X1.3 - Q1.L3 -->
+      <!-- Breaker load to contactor main poles -->
+      <conductor terminal1="4"  terminal2="22" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- Q1.T1 - K1.1 -->
+      <conductor terminal1="5"  terminal2="24" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- Q1.T2 - K1.3 -->
+      <conductor terminal1="6"  terminal2="26" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- Q1.T3 - K1.5 -->
+      <!-- Contactor out to overload -->
+      <conductor terminal1="23" terminal2="30" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- K1.2 - F1.1 -->
+      <conductor terminal1="25" terminal2="32" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- K1.4 - F1.3 -->
+      <conductor terminal1="27" terminal2="34" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- K1.6 - F1.5 -->
+      <!-- Overload out to motor, via X1 field terminals (3-pin nets) -->
+      <conductor terminal1="31" terminal2="73" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- F1.2 - X1.4 -->
+      <conductor terminal1="73" terminal2="40" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- X1.4 - M1.U -->
+      <conductor terminal1="33" terminal2="74" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- F1.4 - X1.5 -->
+      <conductor terminal1="74" terminal2="41" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- X1.5 - M1.V -->
+      <conductor terminal1="35" terminal2="75" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- F1.6 - X1.6 -->
+      <conductor terminal1="75" terminal2="42" type="multi" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/>  <!-- X1.6 - M1.W -->
+      <!-- Control: overload NC contact in series, then stop/start seal-in -->
+      <conductor terminal1="76" terminal2="36" type="simple" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/> <!-- X1.7(ctrl L) - F1.95 -->
+      <conductor terminal1="37" terminal2="50" type="simple" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/> <!-- F1.96 - S1.11 -->
+      <conductor terminal1="51" terminal2="60" type="simple" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/> <!-- S1.12 - S2.13 (node A) -->
+      <conductor terminal1="60" terminal2="28" type="simple" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/> <!-- S2.13 - K1.13 (seal-in in) -->
+      <conductor terminal1="61" terminal2="29" type="simple" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/> <!-- S2.14 - K1.14 (node B) -->
+      <conductor terminal1="29" terminal2="20" type="simple" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/> <!-- K1.14 - K1.A1 (to coil) -->
+      <conductor terminal1="21" terminal2="77" type="simple" num="" formula="" cable="" bus="" condsize="1" freezeLabel="false"/> <!-- K1.A2 - X1.8 (ctrl N) -->
+    </conductors>
+  </diagram>
+</project>
