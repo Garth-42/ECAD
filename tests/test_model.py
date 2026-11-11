@@ -56,7 +56,7 @@ class TestPartLibrary:
     def test_missing_field_raises_with_filename(self, tmp_path: Path) -> None:
         (tmp_path / "broken.json").write_text(json.dumps({"part_number": "B2"}))
         lib = PartLibrary()
-        with pytest.raises(ValueError, match="broken.json"):
+        with pytest.raises(ValueError, match=r"broken\.json"):
             lib.load_directory(tmp_path)
 
 

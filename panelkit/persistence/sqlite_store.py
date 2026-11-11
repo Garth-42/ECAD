@@ -9,6 +9,7 @@ text columns. The library is never stored — only ``part_number`` references.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from ..model.geometry import Placement
 from ..model.harness import Bundle, Harness
 from ..model.layout import Duct, MountingSurface
 from ..model.project import Project
+from .json_store import check_format_version
 
 # Version 2 adds bundles/harnesses tables and wires.wireviz_color (M9).
 # Version-1 databases must keep loading: the loader probes for the newer
@@ -88,9 +90,22 @@ CREATE TABLE harnesses (
 
 
 def save(project: Project, path: str | Path) -> None:
-    """Write the project to an SQLite database, replacing any existing file."""
+    """Write the project to an SQLite database, replacing any existing file.
+
+    The database is built beside the target and renamed into place only once
+    it is complete, so a failed save leaves the previous file untouched.
+    """
     db_path = Path(path)
-    db_path.unlink(missing_ok=True)
+    tmp_path = db_path.with_name(db_path.name + ".tmp")
+    tmp_path.unlink(missing_ok=True)
+    try:
+        _write(project, tmp_path)
+        os.replace(tmp_path, db_path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+def _write(project: Project, db_path: Path) -> None:
     con = sqlite3.connect(db_path)
     try:
         con.executescript(_SCHEMA)
@@ -185,21 +200,30 @@ def save(project: Project, path: str | Path) -> None:
         con.close()
 
 
-def load(path: str | Path, library: PartLibrary) -> Project:
-    """Read a project database and inject ``library``; fails loudly on bad refs."""
+def load(path: str | Path, library: PartLibrary, strict: bool = True) -> Project:
+    """Read a project database and inject ``library``; fails loudly on bad refs.
+
+    ``strict=False`` loads unknown part numbers as-is (see ``json_store.load``).
+    """
     db_path = Path(path)
     if not db_path.exists():
         raise FileNotFoundError(f"no such project database: {db_path}")
     con = sqlite3.connect(db_path)
     try:
-        meta = dict(con.execute("SELECT key, value FROM meta"))
+        try:
+            meta = dict(con.execute("SELECT key, value FROM meta"))
+        except sqlite3.DatabaseError as exc:
+            raise ValueError(f"project {db_path}: not a PanelKit database ({exc})") from exc
+        check_format_version(meta.get("format_version", 1), db_path)
+        if "name" not in meta:
+            raise ValueError(f"project {db_path}: missing project name")
         project = Project(name=meta["name"], library=library)
 
         for tag, part_number, x, y, z, rot, surface_id in con.execute(
             "SELECT tag, part_number, pos_x, pos_y, pos_z, rotation_deg, surface_id"
             " FROM components ORDER BY tag"
         ):
-            if part_number not in library:
+            if strict and part_number not in library:
                 raise ValueError(
                     f"project {db_path}: component {tag!r} references unknown part "
                     f"{part_number!r}"

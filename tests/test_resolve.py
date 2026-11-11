@@ -1,7 +1,6 @@
 """M5: nets -> wires (star through terminals, pairs, daisy chains, numbering)."""
 
 from examples.motor_start_stop import build_project
-
 from panelkit.library.parts import PartLibrary
 from panelkit.model.component import Component
 from panelkit.model.connectivity import Net

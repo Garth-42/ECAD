@@ -105,13 +105,32 @@ class PartLibrary:
         return sorted(self._parts)
 
     def load_directory(self, directory: Path) -> None:
-        """Load every ``*.json`` part file under ``directory``."""
-        for path in sorted(Path(directory).glob("*.json")):
-            data = json.loads(path.read_text())
-            self.add(_part_from_dict(data, str(path)))
+        """Load every ``*.json`` part file under ``directory``.
+
+        Parts loaded here replace same-numbered parts already in the library
+        (that is how a project library overrides a bundled part), but two
+        files in the *same* directory defining one part number is an error.
+        """
+        directory = Path(directory)
+        if not directory.is_dir():
+            raise FileNotFoundError(f"parts directory not found: {directory}")
+        seen: dict[str, Path] = {}
+        for path in sorted(directory.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"part file {path}: invalid JSON ({exc})") from exc
+            part = _part_from_dict(data, str(path))
+            if part.part_number in seen:
+                raise ValueError(
+                    f"part number {part.part_number!r} is defined twice: "
+                    f"{seen[part.part_number].name} and {path.name}"
+                )
+            seen[part.part_number] = path
+            self.add(part)
 
     @classmethod
-    def bundled(cls) -> "PartLibrary":
+    def bundled(cls) -> PartLibrary:
         """Library preloaded with the parts shipped under ``library/data/``."""
         lib = cls()
         data_dir = resources.files("panelkit.library") / "data"

@@ -4,10 +4,7 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-import pytest
-
 from examples.motor_start_stop import build_project
-
 from panelkit.cli import main
 from panelkit.library.parts import PartLibrary
 from panelkit.model.component import Component
@@ -135,8 +132,12 @@ class TestCliEndToEnd:
         # Sneak an unknown part number into the JSON to trigger an error.
         text = bad.read_text().replace("GV2ME14", "MISSING-9")
         bad.write_text(text)
-        with pytest.raises(ValueError):
-            main(["validate", str(bad)])  # load itself fails loudly
+        # validate reports the unknown part as a finding rather than crashing.
+        assert main(["validate", str(bad)]) == 1
+        assert "unknown_part" in capsys.readouterr().out
+        # Every other command refuses the file with a one-line error.
+        assert main(["bom", str(bad)]) == 2
+        assert "unknown part" in capsys.readouterr().err
 
 
 class TestSavedProjectRoundTrip:

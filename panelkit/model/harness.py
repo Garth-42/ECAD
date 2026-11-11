@@ -38,7 +38,7 @@ class Harness:
 
 
 def select_harness(
-    project: "Project", component_tags: set[str], name: str, harness_id: str | None = None
+    project: Project, component_tags: set[str], name: str, harness_id: str | None = None
 ) -> Harness:
     """Harness of every wire whose *both* endpoints lie on ``component_tags``.
 
@@ -65,7 +65,7 @@ def select_harness(
 
 
 def select_harness_by_surface(
-    project: "Project", surface_id: str, name: str, harness_id: str | None = None
+    project: Project, surface_id: str, name: str, harness_id: str | None = None
 ) -> Harness:
     """Harness of wires crossing into/out of one mounting surface.
 

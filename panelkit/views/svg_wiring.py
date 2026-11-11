@@ -7,7 +7,11 @@ through a flip. Views never mutate the model: wire geometry uses the routed
 
 from __future__ import annotations
 
+from itertools import pairwise
+
+from ..model.colors import css_colors
 from ..model.component import world_pin_position
+from ..model.connectivity import natural_key
 from ..model.geometry import BoundingBox
 from ..model.project import Project
 from . import svg_util as svg
@@ -42,7 +46,9 @@ def render_wiring(project: Project) -> str:
     for did in sorted(project.ducts):
         duct = project.ducts[did]
         half = duct.width_mm / 2.0
-        for a, b in zip(duct.centerline, duct.centerline[1:]):
+        if not duct.centerline:
+            continue  # nothing to draw; validation reports degenerate ducts
+        for a, b in pairwise(duct.centerline):
             lo_x, hi_x = min(a[0], b[0]), max(a[0], b[0])
             lo_y, hi_y = min(a[1], b[1]), max(a[1], b[1])
             if lo_y == hi_y:  # horizontal run
@@ -78,17 +84,18 @@ def render_wiring(project: Project) -> str:
         )
 
     # Wires: routed path when present, else straight; labeled with the number.
-    for w in sorted(_wires(project), key=lambda w: w.number):
+    for w in sorted(_wires(project), key=lambda w: natural_key(w.number)):
         if w.path is not None:
             path_pts = [(p[0], p[1]) for p in w.path]
         else:
             a = world_pin_position(project.components[w.source[0]], w.source[1], project.library)
             b = world_pin_position(project.components[w.target[0]], w.target[1], project.library)
             path_pts = [(float(a[0]), float(a[1])), (float(b[0]), float(b[1]))]
-        canvas.add(svg.polyline([pt(x, y) for x, y in path_pts], stroke=w.color, stroke_width=1))
+        for el in svg.wire_polyline([pt(x, y) for x, y in path_pts], w.color):
+            canvas.add(el)
         mid = path_pts[len(path_pts) // 2]
         mx, my = pt(mid[0], mid[1])
-        canvas.add(svg.text(mx + 2, my - 2, w.number, font_size=8, fill=w.color))
+        canvas.add(svg.text(mx + 2, my - 2, w.number, font_size=8, fill=css_colors(w.color)[0]))
 
     # Terminals last so the dots sit on top of the wires.
     for c in project.iter_components():

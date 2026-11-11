@@ -4,6 +4,12 @@ from __future__ import annotations
 
 from xml.sax.saxutils import escape
 
+from ..model.colors import css_colors
+
+# escape() alone leaves double quotes untouched, which would let a value break
+# out of its attribute; attribute values need them encoded too.
+_ATTR_ENTITIES = {'"': "&quot;"}
+
 
 def _fmt(value: object) -> str:
     if isinstance(value, float):
@@ -18,7 +24,7 @@ def _attrs(attrs: dict[str, object]) -> str:
         if value is None:
             continue
         name = key.rstrip("_").replace("_", "-")
-        parts.append(f'{name}="{escape(_fmt(value))}"')
+        parts.append(f'{name}="{escape(_fmt(value), _ATTR_ENTITIES)}"')
     return (" " + " ".join(parts)) if parts else ""
 
 
@@ -41,6 +47,19 @@ def circle(cx: float, cy: float, r: float, **attrs: object) -> str:
 def polyline(points: list[tuple[float, float]], **attrs: object) -> str:
     pts = " ".join(f"{_fmt(x)},{_fmt(y)}" for x, y in points)
     return f'<polyline points="{pts}" fill="none"{_attrs(attrs)} />'
+
+
+def wire_polyline(
+    points: list[tuple[float, float]], color: str, stroke_width: float = 1
+) -> list[str]:
+    """A wire drawn in its colour; two-colour wires get a dashed second stripe."""
+    base, *stripes = css_colors(color)
+    elements = [polyline(points, stroke=base, stroke_width=stroke_width)]
+    for stripe in stripes[:1]:
+        elements.append(
+            polyline(points, stroke=stripe, stroke_width=stroke_width, stroke_dasharray="4 4")
+        )
+    return elements
 
 
 def text(x: float, y: float, content: str, **attrs: object) -> str:

@@ -18,7 +18,8 @@ pin spacing.
 
 from __future__ import annotations
 
-from ..model.connectivity import cross_references
+from ..model.colors import css_colors
+from ..model.connectivity import cross_references, natural_key
 from ..model.project import Project
 from . import svg_util as svg
 from .connection_list import _wires
@@ -165,17 +166,25 @@ def render_schematic(project: Project) -> str:
         side_x = col_x + side * (SYM_W / 2 + 8 + 6 * n)
         return [(px, py), (px, clear_y), (side_x, clear_y), (side_x, y_bus)]
 
-    for wire in sorted(_wires(project), key=lambda w: w.number):
+    for wire in sorted(_wires(project), key=lambda w: natural_key(w.number)):
         if wire.source not in pin_pos or wire.target not in pin_pos:
             continue  # endpoint on a component with no symbol (defensive)
         y_bus = bus_y[wire.net_id]
         a = exit_points(wire.source, y_bus)
         b = exit_points(wire.target, y_bus)
         points = a + list(reversed(b))
-        canvas.add(svg.polyline(points, stroke=wire.color, stroke_width=1))
+        for el in svg.wire_polyline(points, wire.color):
+            canvas.add(el)
         mx = (a[-1][0] + b[-1][0]) / 2
         canvas.add(
-            svg.text(mx, y_bus - 2, wire.number, font_size=7, fill=wire.color, text_anchor="middle")
+            svg.text(
+                mx,
+                y_bus - 2,
+                wire.number,
+                font_size=7,
+                fill=css_colors(wire.color)[0],
+                text_anchor="middle",
+            )
         )
 
     return canvas.to_svg()

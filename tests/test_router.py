@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 
 from examples.motor_start_stop import build_project
-
 from panelkit.model.component import world_pin_position
 from panelkit.model.project import Project
 from panelkit.routing.resolve import resolve_wires

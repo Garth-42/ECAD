@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 import argparse
+import sqlite3
 import sys
 from pathlib import Path
 
 from .examples.motor_start_stop import build_project_with_harness
 from .integrations.wireviz.export import export as export_wireviz_yaml
-from .integrations.wireviz.runner import WirevizNotFoundError, render, wireviz_available
+from .integrations.wireviz.runner import (
+    WirevizNotFoundError,
+    WirevizRenderError,
+    render,
+    wireviz_available,
+)
 from .library.parts import PartLibrary
+from .model.connectivity import wires_consistent
 from .model.project import Project
 from .persistence import load_project, save_project
 from .routing.resolve import resolve_wires
@@ -22,6 +29,10 @@ from .views.svg_schematic import render_schematic
 from .views.svg_wiring import render_wiring
 from .views.terminal_plan import render_terminal_plan
 
+# Exit codes: 0 ok, 1 the project has validation errors (or a render step
+# failed), 2 the command could not run at all (same code argparse uses).
+EXIT_FAILURE = 2
+
 
 def _library(args: argparse.Namespace) -> PartLibrary:
     lib = PartLibrary.bundled()
@@ -30,12 +41,31 @@ def _library(args: argparse.Namespace) -> PartLibrary:
     return lib
 
 
-def _load(args: argparse.Namespace) -> Project:
-    return load_project(args.project, _library(args))
+def _load(args: argparse.Namespace, strict: bool = True) -> Project:
+    return load_project(args.project, _library(args), strict=strict)
+
+
+def _write(path: Path, text: str) -> None:
+    # Always UTF-8: the SVGs contain non-ASCII characters and the platform
+    # default encoding (e.g. cp1252 on Windows) cannot always represent them.
+    path.write_text(text, encoding="utf-8")
+
+
+def _route(project: Project) -> None:
+    """Route, warning (on stderr) about wires that fell back to straight lines."""
+    unrouted = route_wires(project)
+    if unrouted:
+        numbers = ", ".join(project.wires[w].number for w in unrouted)
+        print(
+            f"warning: {len(unrouted)} wire(s) could not be routed through the ducts "
+            f"(disconnected duct sections) and use straight-line lengths: {numbers}",
+            file=sys.stderr,
+        )
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    findings = validate(_load(args))
+    # Lenient load: unknown parts become findings instead of a failed load.
+    findings = validate(_load(args, strict=False))
     for f in findings:
         refs = f" [{', '.join(f.refs)}]" if f.refs else ""
         print(f"{f.severity.upper():<8} {f.code:<18} {f.message}{refs}")
@@ -67,19 +97,20 @@ def cmd_terminals(args: argparse.Namespace) -> int:
 def cmd_route(args: argparse.Namespace) -> int:
     project = _load(args)
     resolve_wires(project)
-    route_wires(project)
+    _route(project)
     print(render_cut_list(project), end="")
     return 0
 
 
 def _render(args: argparse.Namespace, renderer) -> int:
     project = _load(args)
-    if not project.wires:
+    if not project.wires or not wires_consistent(project):
+        # No wires yet, or the nets changed since they were resolved.
         resolve_wires(project)
-        route_wires(project)
+        _route(project)
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(renderer(project))
+    _write(out, renderer(project))
     print(f"wrote {out}")
     return 0
 
@@ -126,9 +157,9 @@ def cmd_export_wireviz(args: argparse.Namespace) -> int:
     try:
         for produced in render(yaml_path, yaml_path.parent):
             print(f"wrote {produced}")
-    except WirevizNotFoundError as exc:
+    except (WirevizNotFoundError, WirevizRenderError) as exc:
         # The YAML stays where it was written; only the render step failed.
-        print(f"error: {exc}")
+        print(f"error: {exc}", file=sys.stderr)
         return 1
     return 0
 
@@ -138,8 +169,8 @@ def cmd_demo(args: argparse.Namespace) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     project = build_project_with_harness()
     save_project(project, out_dir / "project.json")
-    (out_dir / "schematic.svg").write_text(render_schematic(project))
-    (out_dir / "wiring.svg").write_text(render_wiring(project))
+    _write(out_dir / "schematic.svg", render_schematic(project))
+    _write(out_dir / "wiring.svg", render_wiring(project))
     print(f"wrote {out_dir / 'project.json'}")
     print(f"wrote {out_dir / 'schematic.svg'}")
     print(f"wrote {out_dir / 'wiring.svg'}")
@@ -148,8 +179,12 @@ def cmd_demo(args: argparse.Namespace) -> int:
         _print_warnings(export_wireviz_yaml(project, harness_id, yaml_path))
         print(f"wrote {yaml_path}")
         if wireviz_available():
-            for produced in render(yaml_path, out_dir):
-                print(f"wrote {produced}")
+            try:
+                for produced in render(yaml_path, out_dir):
+                    print(f"wrote {produced}")
+            except WirevizRenderError as exc:
+                # Rendering is a bonus step of the demo; the YAML is already written.
+                print(f"note: skipped rendering {yaml_path.name}: {exc}")
         else:
             print(f"note: 'wireviz' not on PATH; skipped rendering {yaml_path.name}")
     findings = validate(project)
@@ -212,7 +247,17 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (ValueError, OSError, sqlite3.Error, RuntimeError) as exc:
+        # Expected failures (missing/corrupt file, bad reference, unknown
+        # harness, ...) get one readable line instead of a traceback.
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_FAILURE
+    except KeyError as exc:
+        # KeyError's str() is the repr of its argument; show the message itself.
+        print(f"error: {exc.args[0] if exc.args else exc}", file=sys.stderr)
+        return EXIT_FAILURE
 
 
 if __name__ == "__main__":

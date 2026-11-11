@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from ...model.connectivity import Wire
+from ...model.connectivity import Wire, natural_key, wires_consistent
 from ...model.harness import Bundle, Harness
 from ...model.project import Project
 from ...rules.checks import Finding
@@ -57,8 +57,38 @@ def _endpoint_pair(wires: list[Wire], designator: str) -> tuple[str, str]:
     return left, right
 
 
+def _require_connectors(wires: list[Wire], connectors: dict, harness_id: str) -> None:
+    """Every wire end must land on a component the harness includes."""
+    for wire in wires:
+        for tag, _pin in (wire.source, wire.target):
+            if tag not in connectors:
+                raise ValueError(
+                    f"harness {harness_id!r}: wire {wire.number} ends on {tag!r}, "
+                    "which is not one of the harness's components"
+                )
+
+
 def _pin_on(wire: Wire, tag: str) -> str:
     return wire.source[1] if wire.source[0] == tag else wire.target[1]
+
+
+def _pin_number(connectors: dict, tag: str, pin: str, wire: Wire) -> int:
+    """1-based position of ``pin`` on connector ``tag``.
+
+    Connections are written with pin *positions*, never labels: WireViz turns
+    any numeric-looking label into an integer and reads it as a position, so
+    a label such as ``"13"`` on a 10-pin contactor fails ("K1:13 not found")
+    and ``"1"`` silently lands on whatever pin happens to be first. Positions
+    are unambiguous; the labels still show in the drawing via ``pinlabels``.
+    """
+    labels = connectors[tag]["pinlabels"]
+    try:
+        return labels.index(pin) + 1
+    except ValueError:
+        raise ValueError(
+            f"wire {wire.number}: pin {tag}:{pin} does not exist on part "
+            f"{connectors[tag]['pn']!r}"
+        ) from None
 
 
 def _cable_length(wires: list[Wire], designator: str, warnings: list[Finding]) -> str | None:
@@ -115,6 +145,16 @@ def to_wireviz_dict(project: Project, harness_id: str) -> tuple[dict, list[Findi
     """Build the WireViz document for one harness as a plain dict."""
     harness = _harness(project, harness_id)
     warnings: list[Finding] = []
+    if not wires_consistent(project):
+        warnings.append(
+            Finding(
+                severity="warning",
+                code="stale_wires",
+                message="stored wires no longer match the nets; this harness may be out "
+                "of date (re-resolve and re-route, then rebuild the harness)",
+                refs=(harness.id,),
+            )
+        )
 
     connectors: dict = {}
     for tag in sorted(harness.component_tags):
@@ -138,17 +178,26 @@ def to_wireviz_dict(project: Project, harness_id: str) -> tuple[dict, list[Findi
     connections: list = []
 
     # Bundles first (sorted by cable name), each one connection set.
+    missing_bundles = sorted(b for b in harness.bundle_ids if b not in project.bundles)
+    if missing_bundles:
+        raise ValueError(f"harness {harness_id!r} references unknown bundles: {missing_bundles}")
     for bundle in sorted((project.bundles[b] for b in harness.bundle_ids), key=lambda b: b.name):
-        wires = sorted((project.wires[w] for w in bundle.wire_ids), key=lambda w: w.number)
+        missing = sorted(w for w in bundle.wire_ids if w not in project.wires)
+        if missing:
+            raise ValueError(f"bundle {bundle.id!r} references unknown wires: {missing}")
+        wires = sorted(
+            (project.wires[w] for w in bundle.wire_ids), key=lambda w: natural_key(w.number)
+        )
+        _require_connectors(wires, connectors, harness_id)
         left, right = _endpoint_pair(wires, bundle.name)
         if bundle.name in cables:
             raise ValueError(f"duplicate cable designator {bundle.name!r}")
         cables[bundle.name] = _cable_entry(bundle, wires, warnings)
         connections.append(
             [
-                {left: [_pin_on(w, left) for w in wires]},
+                {left: [_pin_number(connectors, left, _pin_on(w, left), w) for w in wires]},
                 {bundle.name: list(range(1, len(wires) + 1))},
-                {right: [_pin_on(w, right) for w in wires]},
+                {right: [_pin_number(connectors, right, _pin_on(w, right), w) for w in wires]},
             ]
         )
         bundled_wire_ids.update(w.id for w in wires)
@@ -156,9 +205,22 @@ def to_wireviz_dict(project: Project, harness_id: str) -> tuple[dict, list[Findi
     # Loose wires: one single-conductor cable each (v1), sorted by number.
     loose = sorted(
         (project.wires[w] for w in harness.wire_ids if w not in bundled_wire_ids),
-        key=lambda w: w.number,
+        key=lambda w: natural_key(w.number),
     )
+    _require_connectors(loose, connectors, harness_id)
     for wire in loose:
+        if wire.source[0] == wire.target[0]:
+            # A jumper between two pins of one component is not a cable: it is
+            # a WireViz "loop" on that connector. Loops address pins by
+            # position and carry no gauge/colour.
+            tag = wire.source[0]
+            connectors[tag].setdefault("loops", []).append(
+                [
+                    _pin_number(connectors, tag, wire.source[1], wire),
+                    _pin_number(connectors, tag, wire.target[1], wire),
+                ]
+            )
+            continue
         designator = f"W{wire.number}"
         if designator in cables:
             raise ValueError(
@@ -178,9 +240,9 @@ def to_wireviz_dict(project: Project, harness_id: str) -> tuple[dict, list[Findi
         left, right = _endpoint_pair([wire], designator)
         connections.append(
             [
-                {left: [_pin_on(wire, left)]},
+                {left: [_pin_number(connectors, left, _pin_on(wire, left), wire)]},
                 {designator: [1]},
-                {right: [_pin_on(wire, right)]},
+                {right: [_pin_number(connectors, right, _pin_on(wire, right), wire)]},
             ]
         )
 
@@ -210,5 +272,5 @@ def export(project: Project, harness_id: str, path: str | Path) -> list[Finding]
     text, warnings = to_yaml(project, harness_id)
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(text)
+    out.write_text(text, encoding="utf-8")
     return warnings

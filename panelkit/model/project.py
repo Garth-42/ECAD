@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING
 
 from .component import Component, PinRef
-from .connectivity import Net, Wire
+from .connectivity import Net, Wire, natural_key
 from .harness import Bundle, Harness
 from .layout import Duct, MountingSurface
 
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 @dataclass
 class Project:
     name: str
-    library: "PartLibrary"
+    library: PartLibrary
     components: dict[str, Component] = field(default_factory=dict)
     nets: dict[str, Net] = field(default_factory=dict)
     wires: dict[str, Wire] = field(default_factory=dict)
@@ -56,7 +57,7 @@ class Project:
                 return self.nets[net_id]
         return None
 
-    def part_of(self, component: Component) -> "Part":
+    def part_of(self, component: Component) -> Part:
         return self.library.get(component.part_number)
 
     def iter_components(self) -> Iterator[Component]:
@@ -68,5 +69,5 @@ class Project:
             yield self.nets[net_id]
 
     def iter_wires(self) -> Iterator[Wire]:
-        for wire_id in sorted(self.wires):
+        for wire_id in sorted(self.wires, key=natural_key):
             yield self.wires[wire_id]

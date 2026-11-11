@@ -8,6 +8,7 @@ and a ``PartLibrary`` is injected on load. Output is human-readable and stable
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from ..library.parts import PartLibrary
@@ -93,20 +94,60 @@ def _project_to_dict(project: Project) -> dict:
 
 
 def save(project: Project, path: str | Path) -> None:
-    """Write the project to ``path`` as stable, human-readable JSON."""
-    Path(path).write_text(json.dumps(_project_to_dict(project), indent=2, sort_keys=True) + "\n")
+    """Write the project to ``path`` as stable, human-readable JSON.
+
+    The file is written beside the target and renamed into place, so a
+    failed save never leaves a half-written project behind.
+    """
+    target = Path(path)
+    text = json.dumps(_project_to_dict(project), indent=2, sort_keys=True) + "\n"
+    tmp = target.with_name(target.name + ".tmp")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, target)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
-def load(path: str | Path, library: PartLibrary) -> Project:
+def check_format_version(version: object, path: str | Path) -> None:
+    """Refuse files written by a newer PanelKit than this one understands."""
+    try:
+        number = int(version)  # type: ignore[call-overload]
+    except (TypeError, ValueError):
+        raise ValueError(f"project {path}: invalid format_version {version!r}") from None
+    if number > FORMAT_VERSION:
+        raise ValueError(
+            f"project {path}: format_version {number} is newer than this PanelKit "
+            f"supports ({FORMAT_VERSION}); upgrade PanelKit to open it"
+        )
+
+
+def load(path: str | Path, library: PartLibrary, strict: bool = True) -> Project:
     """Read a project JSON file and inject ``library``.
 
     Raises a clear error when a referenced part number is not in the library.
+    With ``strict=False`` unknown part numbers are loaded as-is so that
+    ``validate`` can report all of them as findings instead of the load
+    stopping at the first.
     """
-    data = json.loads(Path(path).read_text())
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"project {path}: invalid JSON ({exc})") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"project {path}: expected a JSON object at the top level")
+    check_format_version(data.get("format_version", 1), path)
+    try:
+        return _project_from_dict(data, path, library, strict)
+    except KeyError as exc:
+        raise ValueError(f"project {path}: missing required field {exc}") from exc
+
+
+def _project_from_dict(data: dict, path: str | Path, library: PartLibrary, strict: bool) -> Project:
     project = Project(name=data["name"], library=library)
 
     for tag, c in data.get("components", {}).items():
-        if c["part_number"] not in library:
+        if strict and c["part_number"] not in library:
             raise ValueError(
                 f"project {path}: component {tag!r} references unknown part "
                 f"{c['part_number']!r}"

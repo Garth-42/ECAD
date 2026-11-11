@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from examples.motor_start_stop import build_project, build_project_with_harness
-
 from panelkit.model.component import Component
 from panelkit.model.geometry import Placement
 from panelkit.model.harness import Bundle, select_harness, select_harness_by_surface

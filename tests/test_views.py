@@ -2,10 +2,9 @@
 
 import xml.etree.ElementTree as ET
 
-from examples.motor_start_stop import build_project
-
 import pytest
 
+from examples.motor_start_stop import build_project
 from panelkit.model.project import Project
 from panelkit.routing.resolve import resolve_wires
 from panelkit.routing.router import route_wires

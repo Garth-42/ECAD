@@ -7,7 +7,6 @@ import pytest
 import yaml
 
 from examples.motor_start_stop import build_project_with_harness
-
 from panelkit.cli import main
 from panelkit.integrations.wireviz.export import export, to_wireviz_dict, to_yaml
 from panelkit.integrations.wireviz.mapping import to_iec_color, to_wireviz_gauge
@@ -75,9 +74,10 @@ class TestExportDocument:
         assert doc["cables"]["W1"]["category"] == "bundle"
         assert doc["cables"]["W1"]["wirecount"] == 3
         (w1_set,) = [s for s in doc["connections"] if "W1" in s[1]]
-        assert w1_set[0] == {"M1": ["U", "V", "W"]}
+        # Connections use 1-based pin positions (M1: U, V, W are pins 1-3).
+        assert w1_set[0] == {"M1": [1, 2, 3]}
         assert w1_set[1] == {"W1": [1, 2, 3]}
-        assert w1_set[2] == {"X1": ["1", "2", "3"]}
+        assert w1_set[2] == {"X1": [1, 2, 3]}
 
     def test_loose_wires_are_single_conductor_cables(self, doc: dict) -> None:
         loose = [k for k in doc["cables"] if k != "W1"]
@@ -170,7 +170,10 @@ class TestRunner:
         with pytest.raises(WirevizNotFoundError, match="panelkit\\[wireviz\\]"):
             render(tmp_path / "h.yml", tmp_path)
 
-    @pytest.mark.skipif(shutil.which("wireviz") is None, reason="wireviz CLI not installed")
+    @pytest.mark.skipif(
+        shutil.which("wireviz") is None or shutil.which("dot") is None,
+        reason="wireviz CLI and GraphViz are both needed to render",
+    )
     def test_render_produces_drawing_and_bom(self, tmp_path: Path, capsys) -> None:
         main(["demo", "-o", str(tmp_path / "demo")])
         capsys.readouterr()

@@ -14,7 +14,11 @@ from pathlib import Path
 
 
 class WirevizNotFoundError(RuntimeError):
-    pass
+    """The ``wireviz`` executable is not installed / not on PATH."""
+
+
+class WirevizRenderError(RuntimeError):
+    """``wireviz`` ran but failed (commonly: GraphViz is not installed)."""
 
 
 def wireviz_available() -> bool:
@@ -39,11 +43,22 @@ def render(yaml_path: str | Path, out_dir: str | Path) -> list[Path]:
     result = subprocess.run(
         [exe, str(yaml_path), "-o", str(out_dir)],
         capture_output=True,
+        check=False,  # the return code is turned into a clearer error below
         text=True,
     )
     if result.returncode != 0:
-        raise RuntimeError(
-            f"wireviz failed (exit {result.returncode}) on {yaml_path}:\n{result.stderr.strip()}"
+        # WireViz reports failures as a Python traceback; its last line is the
+        # actual reason (e.g. GraphViz's "dot" executable not being found).
+        lines = result.stderr.strip().splitlines()
+        reason = lines[-1] if lines else "no error output"
+        raise WirevizRenderError(
+            f"wireviz failed (exit {result.returncode}) on {yaml_path}: {reason}"
         )
     stem = yaml_path.stem
-    return sorted(p for p in out_dir.iterdir() if p.stem.startswith(stem) and p != yaml_path)
+    # WireViz names its outputs <stem>.<ext> (and <stem>.bom.tsv); matching on
+    # the dotted prefix keeps harness "H1" from claiming "H10"'s files.
+    return sorted(
+        p
+        for p in out_dir.iterdir()
+        if p != yaml_path and (p.stem == stem or p.name.startswith(stem + "."))
+    )

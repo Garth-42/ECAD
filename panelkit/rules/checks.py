@@ -7,12 +7,12 @@ model and return data; they never mutate it.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from itertools import combinations
 
 import numpy as np
 from scipy.spatial import cKDTree
 
 from ..library.parts import UnknownPartError
+from ..model.connectivity import wires_consistent
 from ..model.geometry import ALLOWED_ROTATIONS, BoundingBox, aabb_gap
 from ..model.project import Project
 
@@ -89,6 +89,80 @@ def unconnected_pins(project: Project) -> list[Finding]:
     return findings
 
 
+def dangling_pins(project: Project) -> list[Finding]:
+    """A net names a component that does not exist, or a pin its part lacks."""
+    findings = []
+    for net in project.iter_nets():
+        for tag, pin in sorted(net.pins):
+            component = project.components.get(tag)
+            if component is None:
+                problem = f"unknown component {tag!r}"
+            elif component.part_number not in project.library:
+                continue  # unknown_part reports this
+            elif pin not in {p.name for p in project.part_of(component).pins}:
+                problem = f"pin {pin!r} does not exist on part {component.part_number!r}"
+            else:
+                continue
+            findings.append(
+                Finding(
+                    severity="error",
+                    code="dangling_pins",
+                    message=f"net {net.id!r} ({net.name!r}) references {tag}:{pin}: {problem}",
+                    refs=(net.id, f"{tag}:{pin}"),
+                )
+            )
+    return findings
+
+
+def pin_in_multiple_nets(project: Project) -> list[Finding]:
+    """One pin listed in two or more nets — the nets are shorted together."""
+    nets_by_pin: dict[tuple[str, str], list[str]] = {}
+    for net in project.iter_nets():
+        for ref in net.pins:
+            nets_by_pin.setdefault(ref, []).append(net.id)
+    return [
+        Finding(
+            severity="error",
+            code="pin_in_multiple_nets",
+            message=f"pin {ref[0]}:{ref[1]} belongs to several nets: {net_ids}",
+            refs=(f"{ref[0]}:{ref[1]}", *net_ids),
+        )
+        for ref, net_ids in sorted(nets_by_pin.items())
+        if len(net_ids) > 1
+    ]
+
+
+def stale_wires(project: Project) -> list[Finding]:
+    """Stored wires no longer match the nets they were resolved from."""
+    if wires_consistent(project):
+        return []
+    return [
+        Finding(
+            severity="error",
+            code="stale_wires",
+            message=(
+                "stored wires no longer match the nets (nets were edited after the wires "
+                "were resolved); re-run resolve_wires() and route_wires(). Bundles and "
+                "harnesses that reference the old wire ids need rebuilding too"
+            ),
+        )
+    ]
+
+
+def degenerate_ducts(project: Project) -> list[Finding]:
+    """A duct with fewer than two waypoints has no run and cannot carry wires."""
+    return [
+        Finding(
+            severity="warning",
+            code="degenerate_duct",
+            message=f"duct {duct_id!r} has fewer than two waypoints; the router ignores it",
+            refs=(duct_id,),
+        )
+        for duct_id in sorted(project.ducts)
+        if len(project.ducts[duct_id].centerline) < 2
+    ]
+
+
 def empty_net(project: Project) -> list[Finding]:
     return [
         Finding(
@@ -155,7 +229,9 @@ def clearance_violations(project: Project, min_gap_mm: float = 10.0) -> list[Fin
     """Component AABBs that overlap or sit closer than ``min_gap_mm``.
 
     A KDTree over AABB centroids prunes candidate pairs; the exact
-    axis-aligned gap decides each candidate.
+    axis-aligned gap decides each candidate. Only components on the same
+    mounting surface are compared: each surface has its own coordinate frame,
+    so a door device and a backplate device at the same XY do not collide.
     """
     tagged = [c for c in project.iter_components() if c.part_number in project.library]
     boxes = []
@@ -171,11 +247,11 @@ def clearance_violations(project: Project, min_gap_mm: float = 10.0) -> list[Fin
     radius = 2.0 * max(half_diags) + min_gap_mm
     tree = cKDTree(centroids)
     candidates = sorted(tree.query_pairs(r=radius))
-    if not candidates:  # pragma: no cover - defensive
-        candidates = list(combinations(range(len(tagged)), 2))
 
     findings = []
     for i, j in candidates:
+        if tagged[i].surface_id != tagged[j].surface_id:
+            continue
         gap = aabb_gap(boxes[i], boxes[j])
         if gap < min_gap_mm:
             a, b = tagged[i].tag, tagged[j].tag
@@ -195,6 +271,10 @@ ALL_RULES = (
     duplicate_tags,
     unknown_part,
     unconnected_pins,
+    dangling_pins,
+    pin_in_multiple_nets,
+    stale_wires,
+    degenerate_ducts,
     empty_net,
     overcurrent,
     rotation_valid,

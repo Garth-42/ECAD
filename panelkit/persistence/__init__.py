@@ -21,8 +21,9 @@ def _backend(path: str | Path):
     return sqlite_store if Path(path).suffix.lower() in SQLITE_SUFFIXES else json_store
 
 
-def load_project(path: str | Path, library: PartLibrary) -> Project:
-    return _backend(path).load(path, library)
+def load_project(path: str | Path, library: PartLibrary, strict: bool = True) -> Project:
+    """Load a project; see ``json_store.load`` for what ``strict`` controls."""
+    return _backend(path).load(path, library, strict=strict)
 
 
 def save_project(project: Project, path: str | Path) -> None:

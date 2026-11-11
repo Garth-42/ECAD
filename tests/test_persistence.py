@@ -12,8 +12,7 @@ import pytest
 from panelkit.library.parts import PartLibrary
 from panelkit.model.connectivity import Wire
 from panelkit.model.project import Project
-from panelkit.persistence import load_project, save_project
-from panelkit.persistence import sqlite_store
+from panelkit.persistence import load_project, save_project, sqlite_store
 from panelkit.persistence.json_store import load, save
 
 

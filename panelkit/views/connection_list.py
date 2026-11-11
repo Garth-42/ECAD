@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..model.connectivity import Wire
+from ..model.connectivity import Wire, natural_key, wires_consistent
 from ..model.project import Project
 from ..routing.resolve import compute_wires
 
@@ -20,9 +20,18 @@ class ConnectionRow:
 
 
 def _wires(project: Project) -> list[Wire]:
-    """Resolved wires — from the model when present, else computed locally."""
-    wires = project.wires or compute_wires(project)
-    return [wires[k] for k in sorted(wires)]
+    """Resolved wires, ordered by id.
+
+    The nets are the source of truth. Stored wires are used only while they
+    still realize the nets; if the nets were edited since the wires were
+    resolved (or there are no wires yet) the wires are computed locally, so
+    every view keeps agreeing with the netlist.
+    """
+    if project.wires and wires_consistent(project):
+        wires = project.wires
+    else:
+        wires = compute_wires(project)
+    return [wires[k] for k in sorted(wires, key=natural_key)]
 
 
 def connection_list(project: Project) -> list[ConnectionRow]:
@@ -39,7 +48,7 @@ def connection_list(project: Project) -> list[ConnectionRow]:
                 color=w.color,
             )
         )
-    return sorted(rows, key=lambda r: r.number)
+    return sorted(rows, key=lambda r: natural_key(r.number))
 
 
 def render_connection_list(project: Project) -> str:
